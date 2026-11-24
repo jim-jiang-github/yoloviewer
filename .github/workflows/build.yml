@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Rename executable
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          Copy-Item "src-tauri/target/release/yolo-viewer.exe" "YOLO-Viewer-$version.exe"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YOLO-Viewer-${{ github.ref_name }}
+          path: YOLO-Viewer-*.exe
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: YOLO-Viewer-*.exe
