@@ -16,8 +16,8 @@
             </svg>
           </div>
           <div class="brand-text">
-            <strong>YOLO 标注查看器</strong>
-            <span>Annotation Viewer</span>
+            <strong id="brand-title">YOLO 标注查看器</strong>
+            <span id="brand-subtitle">Annotation Viewer</span>
           </div>
         </div>
 
@@ -38,13 +38,14 @@
           <span class="divider"></span>
           <button id="btn-toggle-labels" class="btn btn-toggle active" title="显示/隐藏类别标签">类别标签</button>
           <button id="btn-reveal" class="btn btn-icon" title="在资源管理器中显示" aria-label="在资源管理器中显示">&#8599;</button>
+          <button id="btn-lang" class="btn" title="切换语言 / Switch language">EN</button>
         </div>
       </header>
 
       <div class="main">
         <aside class="panel sidebar">
           <div class="panel-head">
-            <h3>图片列表</h3>
+            <h3 id="panel-image-list">图片列表</h3>
             <span id="file-stats" class="muted"></span>
           </div>
           <div class="search-wrap">
@@ -67,8 +68,8 @@
                 <path d="M8 13h8M12 9v8" />
               </svg>
             </div>
-            <h2>还没有打开数据集</h2>
-            <p>选择包含图片的文件夹，会自动读取同目录或 labels 子目录中的 YOLO 标注文件。</p>
+            <h2 id="empty-title">还没有打开数据集</h2>
+            <p id="empty-hint">选择包含图片的文件夹，会自动读取同目录或 labels 子目录中的 YOLO 标注文件。</p>
             <button id="btn-open-empty" class="btn btn-primary btn-lg">选择文件夹</button>
           </div>
           <div id="zoom-badge" class="zoom-badge" hidden>100%</div>
@@ -77,12 +78,12 @@
 
         <aside class="panel inspector">
           <section class="inspector-section">
-            <div class="panel-head"><h3>当前图片</h3></div>
+            <div class="panel-head"><h3 id="panel-current-image">当前图片</h3></div>
             <div id="file-info" class="file-info empty-text">未选择图片</div>
           </section>
           <section class="inspector-section class-section">
             <div class="panel-head">
-              <h3>类别筛选</h3>
+              <h3 id="panel-class-filter">类别筛选</h3>
               <div class="head-actions">
                 <button id="btn-all-classes" class="link">全选</button>
                 <button id="btn-no-classes" class="link">全不选</button>
@@ -93,7 +94,7 @@
           </section>
           <section class="inspector-section annotation-section">
             <div class="panel-head">
-              <h3>标注框</h3>
+              <h3 id="panel-boxes">标注框</h3>
               <span id="box-count" class="muted"></span>
             </div>
             <div id="annotation-list" class="annotation-list empty-text">暂无标注</div>
@@ -105,7 +106,7 @@
         <span id="status-root">未打开文件夹</span>
         <span id="status-extra" class="status-extra"></span>
         <span class="spacer"></span>
-        <span class="shortcuts">&#8592; &#8594; 切换图片 &nbsp;·&nbsp; 滚轮缩放 &nbsp;·&nbsp; 拖拽平移 &nbsp;·&nbsp; 单击选中标注框 &nbsp;·&nbsp; 0 适应窗口 &nbsp;·&nbsp; L 标签开关</span>
+        <span id="shortcuts" class="shortcuts">&#8592; &#8594; 切换图片 &nbsp;·&nbsp; 滚轮缩放 &nbsp;·&nbsp; 拖拽平移 &nbsp;·&nbsp; 单击选中标注框 &nbsp;·&nbsp; 0 适应窗口 &nbsp;·&nbsp; L 标签开关</span>
       </footer>
     </div>
     <script type="module" src="/src/main.js"></script>

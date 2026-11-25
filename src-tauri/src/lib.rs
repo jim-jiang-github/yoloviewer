@@ -801,6 +801,23 @@ fn startup_path() -> Option<String> {
 }
 
 #[tauri::command]
+fn system_locale() -> Option<String> {
+    #[cfg(windows)]
+    {
+        #[link(name = "kernel32")]
+        extern "system" {
+            fn GetUserDefaultLocaleName(locale_name: *mut u16, size: i32) -> i32;
+        }
+        let mut buffer = [0u16; 85];
+        let length = unsafe { GetUserDefaultLocaleName(buffer.as_mut_ptr(), buffer.len() as i32) };
+        if length > 1 {
+            return Some(String::from_utf16_lossy(&buffer[..(length as usize - 1)]));
+        }
+    }
+    None
+}
+
+#[tauri::command]
 fn reveal_in_explorer(path: String) -> Result<(), String> {
     #[cfg(windows)]
     {
@@ -824,6 +841,7 @@ pub fn run() {
             search_images,
             get_annotations,
             startup_path,
+            system_locale,
             reveal_in_explorer
         ])
         .run(tauri::generate_context!())

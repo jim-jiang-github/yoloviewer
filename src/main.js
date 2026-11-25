@@ -2,6 +2,7 @@ import './styles.css';
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
+import { t, initI18n, toggleLanguage, onLanguageChange, localeNumber } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -78,7 +79,7 @@ function escapeHtml(value) {
 }
 
 function fmt(value) {
-  return Number(value || 0).toLocaleString('zh-CN');
+  return localeNumber(value);
 }
 
 function classColor(id) {
@@ -91,7 +92,7 @@ function softColor(hsl, alpha) {
 }
 
 function className(id) {
-  return state.classes?.[id] ?? `类别 ${id}`;
+  return state.classes?.[id] ?? t('classN', { id });
 }
 
 function annotationName(annotation) {
@@ -203,7 +204,7 @@ function draw() {
       ctx.fillStyle = '#98a2b6';
       ctx.font = '13px "Segoe UI", "Microsoft YaHei", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('图片加载中...', width / 2, height / 2);
+      ctx.fillText(t('loadingImage'), width / 2, height / 2);
       ctx.textAlign = 'left';
     }
     return;
@@ -342,7 +343,7 @@ function paintRows(positions, start, token) {
   const html = positions.map((position) => {
     const real = viewToReal(position);
     const meta = state.metaCache.get(real);
-    const name = meta ? meta.name : '加载中…';
+    const name = meta ? meta.name : t('loading');
     let badge = '—';
     let badgeClass = 'no-label';
     if (state.annotationCache.has(real)) {
@@ -412,7 +413,7 @@ function ensureVisible(real) {
 
 function renderClassList() {
   if (!state.classes.length) {
-    els.classList.innerHTML = '<div class="empty-text">暂无类别</div>';
+    els.classList.innerHTML = `<div class="empty-text">${t('noClassList')}</div>`;
     return;
   }
   els.classList.innerHTML = state.classes.map((name, id) => {
@@ -429,18 +430,18 @@ function renderClassList() {
 function renderAnnotationList() {
   const annotations = state.currentAnnotations;
   if (!annotations || !annotations.length) {
-    els.annotationList.innerHTML = '<div class="empty-text">当前图片没有标注框</div>';
+    els.annotationList.innerHTML = `<div class="empty-text">${t('noBoxesOnImage')}</div>`;
     els.boxCount.textContent = '';
     return;
   }
-  els.boxCount.textContent = `${annotations.length} 个`;
+  els.boxCount.textContent = t('countBoxes', { count: annotations.length });
   els.annotationList.innerHTML = annotations.map((annotation, index) => {
     const color = classColor(annotation.classId);
     const confidence = annotation.confidence != null
       ? `<span class="confidence">${(annotation.confidence * 100).toFixed(1)}%</span>` : '';
     const nb = normalizedBox(annotation, state.currentImg || { naturalWidth: 1, naturalHeight: 1 });
     const coords = `x ${nb.cx.toFixed(3)} &nbsp; y ${nb.cy.toFixed(3)} &nbsp; w ${nb.w.toFixed(3)} &nbsp; h ${nb.h.toFixed(3)}`;
-    const sub = `类别 ${annotation.classId}${annotation.objectId ? `　·　ID ${escapeHtml(String(annotation.objectId))}` : ''}`;
+    const sub = `${t('classN', { id: annotation.classId })}${annotation.objectId ? `　·　ID ${escapeHtml(String(annotation.objectId))}` : ''}`;
     return `<div class="annotation-item ${index === state.selectedBox ? 'selected' : ''}" data-index="${index}">
       <span class="annotation-no" style="background:${color}">${index + 1}</span>
       <div class="annotation-body">
@@ -454,23 +455,23 @@ function renderAnnotationList() {
 
 function renderFileInfo(meta) {
   if (!meta) {
-    els.fileInfo.innerHTML = '<div class="empty-text">加载中…</div>';
+    els.fileInfo.innerHTML = `<div class="empty-text">${t('loading')}</div>`;
     return;
   }
   const img = state.currentImg;
   const dimensions = img && img.naturalWidth
-    ? `${img.naturalWidth} × ${img.naturalHeight}` : '加载中';
+    ? `${img.naturalWidth} × ${img.naturalHeight}` : t('loading');
   const labelName = meta.labelPath
     ? escapeHtml(meta.labelPath.split(/[\\/]/).pop())
-    : '<span style="color:#d9483f">无标注文件</span>';
+    : `<span style="color:#d9483f">${t('noLabelFile')}</span>`;
   els.fileInfo.innerHTML = `
     <div class="file-name" title="${escapeHtml(meta.path)}">${escapeHtml(meta.name)}</div>
     <div class="file-path" title="${escapeHtml(meta.path)}">${escapeHtml(meta.path)}</div>
     <div class="info-grid">
-      <div class="info-cell"><span>图像尺寸</span><strong>${dimensions}</strong></div>
-      <div class="info-cell"><span>标注框</span><strong>${state.currentAnnotations.length}</strong></div>
-      <div class="info-cell"><span>标注文件</span><strong>${labelName}</strong></div>
-      <div class="info-cell"><span>类别来源</span><strong>${escapeHtml(state.classSource)}</strong></div>
+      <div class="info-cell"><span>${t('imageDims')}</span><strong>${dimensions}</strong></div>
+      <div class="info-cell"><span>${t('boxes')}</span><strong>${state.currentAnnotations.length}</strong></div>
+      <div class="info-cell"><span>${t('labelFile')}</span><strong>${labelName}</strong></div>
+      <div class="info-cell"><span>${t('classSource')}</span><strong>${escapeHtml(state.classSource)}</strong></div>
     </div>`;
 }
 
@@ -479,18 +480,18 @@ function renderToolbar() {
   const position = state.currentIndex < 0 ? 0 : Math.max(0, realToView(state.currentIndex) + 1);
   els.counter.textContent = state.listReady ? `${fmt(position)} / ${fmt(length)}` : '0 / 0';
   els.fileStats.textContent = state.listReady
-    ? `${fmt(length)} 张图片`
-    : (state.scanPhase === 'scanning' || state.scanPhase === 'sorting' ? '索引中…' : '');
+    ? t('countImages', { count: fmt(length) })
+    : (state.scanPhase === 'scanning' || state.scanPhase === 'sorting' ? t('indexing') : '');
   els.btnPrev.disabled = !state.listReady || position <= 1;
   els.btnNext.disabled = !state.listReady || position >= length;
   els.btnToggleLabels.classList.toggle('active', state.showLabels);
   const statsText = state.stats.done
-    ? `${fmt(state.stats.totalBoxes)} 个标注框`
-    : `统计中 ${Math.round(state.stats.progress * 100)}%`;
+    ? t('countAnnotations', { count: fmt(state.stats.totalBoxes) })
+    : t('countingPercent', { percent: Math.round(state.stats.progress * 100) });
   els.statusRoot.textContent = state.root
-    ? `${state.root}　·　${fmt(state.total)} 张图片　·　${statsText}　·　${state.classes.length} 个类别${state.hasNames ? '　·　含物体名称' : ''}`
-    : '未打开文件夹';
-  els.statusExtra.textContent = state.query ? `筛选：${state.query}` : '';
+    ? t('statusOpened', { root: state.root, count: fmt(state.total), stats: statsText, classes: state.classes.length, hasNames: state.hasNames ? t('withNames') : '' })
+    : t('statusNoFolder');
+  els.statusExtra.textContent = state.query ? t('filterLabel', { query: state.query }) : '';
   els.empty.hidden = state.currentIndex >= 0;
   updateZoomUI();
 }
@@ -511,7 +512,7 @@ function loadImageElement(meta, realIndex) {
     }
   };
   img.onerror = () => {
-    if (state.currentIndex === realIndex) toast(`无法加载图片：${meta.name}`);
+    if (state.currentIndex === realIndex) toast(t('loadFailed', { name: meta.name }));
   };
   img.src = convertFileSrc(meta.path);
   putWithLimit(state.imageCache, meta.path, img, IMAGE_CACHE_MAX);
@@ -541,7 +542,7 @@ async function selectImage(realIndex) {
         putWithLimit(state.metaCache, realIndex, meta, META_CACHE_MAX);
       }
     } catch (error) {
-      toast(`读取图片信息失败：${error}`);
+      toast(t('readMetaFailed', { error }));
       return;
     }
   }
@@ -610,17 +611,17 @@ async function startScan(path, persist) {
   await ensureListeners();
   resetState();
   state.root = path;
-  updateScanUI(true, '正在扫描目录…');
+  updateScanUI(true, t('scanning'));
   try {
     const init = await invoke('scan_folder', { path });
-    state.classes = init.classes || ['类别 0'];
-    state.classSource = init.classSource || '自动生成';
+    state.classes = init.classes || [t('classZero')];
+    state.classSource = init.classSource || t('autoGenerated');
     if (persist) localStorage.setItem('yolo-viewer-last-path', path);
     renderClassList();
     renderToolbar();
     draw();
   } catch (error) {
-    toast(`扫描失败：${error}`);
+    toast(t('scanFailed', { error }));
     if (!persist) localStorage.removeItem('yolo-viewer-last-path');
     state.root = '';
     updateScanUI(false);
@@ -633,17 +634,17 @@ function onScanProgress(payload) {
   if (payload.phase === 'images-ready') {
     state.total = payload.indexed;
     state.listReady = true;
-    updateScanUI(true, `已索引 ${fmt(payload.indexed)} 张图片，正在后台准备标注名称…`);
+    updateScanUI(true, t('indexedImages', { count: fmt(payload.indexed) }));
     renderToolbar();
     renderVisible();
     if (state.currentIndex < 0 && state.total > 0) selectImage(0);
   } else if (payload.phase === 'scanning' || payload.phase === 'sorting') {
-    updateScanUI(true, `正在扫描目录… 已发现 ${fmt(payload.indexed)} 张图片`);
+    updateScanUI(true, t('scanningFound', { count: fmt(payload.indexed) }));
     renderToolbar();
   } else if (payload.phase === 'jsonl') {
-    updateScanUI(true, `正在建立标注名称索引… ${fmt(payload.indexed)} 行`);
+    updateScanUI(true, t('buildingIndex', { count: fmt(payload.indexed) }));
   } else if (payload.phase === 'stats') {
-    updateScanUI(true, '正在后台统计标注框…（界面可正常使用）');
+    updateScanUI(true, t('countingBackground'));
   }
 }
 
@@ -671,7 +672,7 @@ function onStats(payload) {
   };
   if (payload.classes && payload.classes.length) state.classes = payload.classes;
   renderClassList();
-  setStatsHint(payload.done ? '' : `正在统计标注框… ${Math.round(payload.progress * 100)}%`);
+  setStatsHint(payload.done ? '' : t('statsHintCounting', { percent: Math.round(payload.progress * 100) }));
   renderToolbar();
 }
 
@@ -693,7 +694,7 @@ async function refreshSearch() {
     try {
       state.viewIndices = await invoke('search_images', { query });
     } catch (error) {
-      toast(`搜索失败：${error}`);
+      toast(t('searchFailed', { error }));
     }
   }
   renderVisible();
@@ -703,11 +704,11 @@ async function refreshSearch() {
 async function openFolder() {
   await ensureListeners();
   try {
-    const selected = await open({ directory: true, multiple: false, title: '选择图片或数据集文件夹' });
+    const selected = await open({ directory: true, multiple: false, title: t('selectFolderDialog') });
     if (!selected) return;
     await startScan(selected, true);
   } catch (error) {
-    toast(`打开文件夹失败：${error}`);
+    toast(t('openFolderFailed', { error }));
   }
 }
 
@@ -734,6 +735,7 @@ $('btn-zoom-in').addEventListener('click', () => zoomCenter(1.25));
 $('btn-zoom-out').addEventListener('click', () => zoomCenter(0.8));
 $('btn-fit').addEventListener('click', fitView);
 els.btnToggleLabels.addEventListener('click', toggleLabels);
+$('btn-lang').addEventListener('click', toggleLanguage);
 $('btn-all-classes').addEventListener('click', () => setAllClasses(true));
 $('btn-no-classes').addEventListener('click', () => setAllClasses(false));
 $('btn-reveal').addEventListener('click', async () => {
@@ -742,7 +744,7 @@ $('btn-reveal').addEventListener('click', async () => {
   try {
     await invoke('reveal_in_explorer', { path: meta.path });
   } catch (error) {
-    toast(`打开资源管理器失败：${error}`);
+    toast(t('revealFailed', { error }));
   }
 });
 
@@ -856,6 +858,14 @@ resizeObserver.observe($('stage'));
 /* ---------------- startup ---------------- */
 
 async function bootstrap() {
+  onLanguageChange(() => {
+    renderClassList();
+    renderAnnotationList();
+    renderFileInfo(state.metaCache.get(state.currentIndex));
+    renderToolbar();
+    draw();
+  });
+  initI18n();
   await ensureListeners();
   let startupPath = null;
   try {
